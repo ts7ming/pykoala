@@ -4,6 +4,7 @@ from sqlalchemy.pool import NullPool
 from pymysql.constants import CLIENT
 import pymysql
 import os
+from .excel import Excel
 
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'
 
@@ -61,14 +62,15 @@ class DataSource(object):
 
             elif self.db_type.lower() == 'mssql' or self.db_type == 'mssql':
                 engine = create_engine(
-                    "mssql+pymssql://{}:{}@{}:{}/{}".format(
+                    "mssql+pyodbc://{}:{}@{}:{}/{}?driver=SQL+Server".format(
                         self.username,
                         self.password,
                         str(self.host),
                         str(self.port),
                         str(self.db_name)
                     ),
-                    poolclass=NullPool
+                    poolclass=NullPool,
+                    fast_executemany=True
                 )
             elif self.db_type.lower() == 'oracle':
                 import cx_Oracle
@@ -287,3 +289,13 @@ class DataSource(object):
             except:
                 pass
         return df
+
+    def read_excel(self, path, sheet_name=None):
+        df = pd.read_excel(path,sheet_name=sheet_name)
+        return df
+    
+    @staticmethod
+    def to_excel(file_dir, file_name, sheet_list, fillna='', fmt=None, font='微软雅黑', font_color='black', font_size=11, column_width=17):
+        ex = Excel(file_dir)
+        path = ex.to_excel(file_name, sheet_list, fillna='', fmt=None, font='微软雅黑', font_color='black', font_size=11, column_width=17)
+        return path
