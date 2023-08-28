@@ -16,7 +16,7 @@ $ pip3 uninstall Pykoala
 #### etl.DataSource
 ```python
 from pykoala.etl import DataSource
-ds = DataSource(host,username,passwd,port,db_name,db_type)
+ds = DataSource(host,username,password,port,db_name,db_type)
 # db_type: MySQL(default),Oracle,MSSQL, clickhouse
 
 # 根据sql查询
