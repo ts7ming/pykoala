@@ -16,7 +16,6 @@ setup(
         'requests',
         'socket.engine',
         'SQLAlchemy',
-        'clickhouse_sqlalchemy',
         'xlrd==1.2.0',
         'XlsxWriter'
     ],
