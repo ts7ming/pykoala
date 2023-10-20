@@ -5,6 +5,7 @@ from pymysql.constants import CLIENT
 import pymysql
 import os
 from .excel import Excel
+from urllib.parse import quote_plus
 
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'
 
@@ -22,14 +23,14 @@ class DataSource(object):
         self.__keep_conn = 0
         if db_type.lower() != 'sqlite':
             self.username = username
-            self.password = password
+            self.password = quote_plus(password)
             self.port = port
             self.db_name = db_name
 
         self.__db_conn = {
             'host': str(host),
             'username': str(username),
-            'password': str(password),
+            'password': str(quote_plus(password)),
             'port': str(port),
             'db_name': str(db_name)
         }
