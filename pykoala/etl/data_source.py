@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
 from pymysql.constants import CLIENT
@@ -6,6 +7,7 @@ import pymysql
 import os
 from .excel import Excel
 from urllib.parse import quote_plus
+import xlsxwriter
 
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'
 
@@ -21,12 +23,12 @@ class DataSource(object):
         self.chunksize = 10000
         self.__operator = None
         self.__keep_conn = 0
+        self.charset = 'utf8mb4'
         if db_type.lower() != 'sqlite':
             self.username = username
             self.password = quote_plus(password)
             self.port = port
             self.db_name = db_name
-
         self.__db_conn = {
             'host': str(host),
             'username': str(username),
@@ -38,8 +40,8 @@ class DataSource(object):
     def set_db(self, db_name):
         self.db_name = db_name
 
-    def set_operator(self, func):
-        self.__operator = func
+    def set_charset(self, charset):
+        self.charset = charset
 
     def __get_conn(self, load_file=False):
         if load_file:
@@ -49,15 +51,15 @@ class DataSource(object):
         try:
             if self.db_type.lower() == 'mysql':
                 engine = create_engine(
-                    "mysql+pymysql://{}:{}@{}:{}/{}?charset=utf8mb4{}".format(
+                    "mysql+pymysql://{}:{}@{}:{}/{}?charset={}{}".format(
                         self.username,
                         self.password,
                         str(self.host),
                         str(self.port),
                         str(self.db_name),
-                        param
+                        self.charset,
+                        param,
                     ),
-                    convert_unicode=True,
                     poolclass=NullPool
                 )
 
@@ -145,11 +147,6 @@ class DataSource(object):
             if self.__keep_conn == 0:
                 conn.close()
                 engine.dispose()
-        if self.__operator is not None:
-            try:
-                self.__operator({'sql': sql, 'db_name': self.db_name, 'func': 'pykoala.DataSource.get_sql'})
-            except:
-                pass
         return df
 
     def get_sql_group(self, sql, params):
@@ -192,11 +189,6 @@ class DataSource(object):
             if self.__keep_conn == 0:
                 conn.close()
                 engine.dispose()
-        if self.__operator is not None:
-            try:
-                self.__operator({'tb_name': tb_name, 'db_name': self.db_name, 'func': 'pykoala.DataSource.to_db'})
-            except:
-                pass
 
     def exe_sql(self, sql):
         if self.__keep_conn == 1:
@@ -248,11 +240,6 @@ class DataSource(object):
                 if self.__keep_conn == 0:
                     conn.close()
                     engine.dispose()
-        if self.__operator is not None:
-            try:
-                self.__operator({'sql': sql, 'db_name': self.db_name, 'func': 'pykoala.DataSource.exe_sql'})
-            except:
-                pass
 
     def row_count(self, table_name):
         sql = 'select count(1) from ' + table_name
@@ -284,19 +271,69 @@ class DataSource(object):
                 df = self.get_sql(sql)
                 if ret_type == 'polars':
                     df = pl.from_pandas(df)
-        if self.__operator is not None:
-            try:
-                self.__operator({'sql': sql, 'db_name': self.db_name, 'func': 'pykoala.DataSource.read_sql'})
-            except:
-                pass
         return df
 
     def read_excel(self, path, sheet_name=None):
-        df = pd.read_excel(path,sheet_name=sheet_name)
+        df = pd.read_excel(path, sheet_name=sheet_name)
         return df
-    
+
     @staticmethod
-    def to_excel(file_dir, file_name, sheet_list, fillna='', fmt=None, font='微软雅黑', font_color='black', font_size=11, column_width=17):
-        ex = Excel(file_dir)
-        path = ex.to_excel(file_name, sheet_list, fillna='', fmt=None, font='微软雅黑', font_color='black', font_size=11, column_width=17)
-        return path
+    def to_excel(file_path, sheet_list, fillna='', fmt=None, font='微软雅黑', font_color='black', font_size=11, column_width=17):
+
+        '''
+        **DataFrame对象写入Excel文件**
+        :param file_path: 文件路径 (须以 .xlsx结尾)
+        :param sheet_list: list [[dataframe,sheet_name],[dataframe2,sheet_name2]]
+
+        fmt={
+            'col1':'#,##0',
+            'col2':'#,##0.0',
+            'col3':'0%',
+            'col4':'0.00%',
+            'col5':'YYYY-MM-DD',
+            ''
+        }
+        '''
+        if str(file_path)[-5:] != '.xlsx':
+            raise Exception('文件路径必须 .xlsx 结尾')
+        wb = xlsxwriter.Workbook(file_path)
+        fmt_default = wb.add_format()
+        fmt_default.set_font_name(font)
+        fmt_default.set_font_color(font_color)
+        fmt_default.set_font_size(font_size)
+
+        style = {
+            'align': 'center',
+            'bold': True
+        }
+        fmt_head = wb.add_format(style)
+        fmt_head.set_font_name(font)
+        fmt_head.set_font_color(font_color)
+        fmt_head.set_font_size(font_size)
+
+        if fmt is None:
+            fmt = {}
+        for df, sheet_name in sheet_list:
+            df = df.fillna(fillna)
+            df.replace(-np.inf, fillna, inplace=True)
+            df.replace(np.inf, fillna, inplace=True)
+            ws = wb._add_sheet(sheet_name)
+            head = df.columns.to_list()
+            data = df.values.tolist()
+
+            row_num, col_num = df.shape
+            for col_name, col_index in zip(head, range(col_num)):
+                if col_name in fmt.keys():
+                    col_format = None
+                    col_format = wb.add_format({'num_format': fmt[col_name]})
+                    col_format.set_font_name(font)
+                    col_format.set_font_color(font_color)
+                    col_format.set_font_size(font_size)
+                else:
+                    col_format = fmt_default
+                ws.set_column(col_index, col_index, column_width)
+                ws.write(0, col_index, str(col_name), fmt_head)
+                for row_index in range(row_num):
+                    value = data[row_index][col_index]
+                    ws.write(row_index + 1, col_index, value, col_format)
+        wb.close()
