@@ -32,7 +32,7 @@ class DataSource(object):
         self.__db_conn = {
             'host': str(host),
             'username': str(username),
-            'password': str(quote_plus(password)),
+            'password': '' if password is None else quote_plus(password),
             'port': str(port),
             'db_name': str(db_name)
         }
@@ -62,8 +62,7 @@ class DataSource(object):
                     ),
                     poolclass=NullPool
                 )
-
-            elif self.db_type.lower() == 'mssql' or self.db_type == 'mssql':
+            elif self.db_type.lower() == 'mssql':
                 engine = create_engine(
                     "mssql+pyodbc://{}:{}@{}:{}/{}?driver=SQL+Server".format(
                         self.username,

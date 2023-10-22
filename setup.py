@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='PyKoala',
-    version='1.0.4',
+    version='1.0.5',
     url='https://github.com/ts7ming/pykoala.git',
     description='PyKoala makes programming easier',
     author='7ming',
