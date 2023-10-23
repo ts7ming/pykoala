@@ -9,6 +9,10 @@
 $ pip3 install git+https://github.com/ts7ming/pykoala.git
 $ pip3 install git+https://github.com/ts7ming/pykoala.git --upgrade
 $ pip3 uninstall Pykoala
+
+连接出问题可以用 gitee
+$ pip3 install git+https://gitee.com/ts7ming/pykoala.git
+$ pip3 install git+https://gitee.com/ts7ming/pykoala.git --upgrade
 ```
 
 ## 模块
