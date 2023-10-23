@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='PyKoala',
-    version='1.0.5',
+    version='1.0.6',
     url='https://github.com/ts7ming/pykoala.git',
     description='PyKoala makes programming easier',
     author='7ming',
@@ -15,7 +15,7 @@ setup(
         'PyMySQL',
         'requests',
         'socket.engine',
-        'SQLAlchemy',
+        'SQLAlchemy==1.4.49',
         'xlrd==1.2.0',
         'XlsxWriter'
     ],
