@@ -5,7 +5,6 @@ from sqlalchemy.pool import NullPool
 from pymysql.constants import CLIENT
 import pymysql
 import os
-from .excel import Excel
 from urllib.parse import quote_plus
 import xlsxwriter
 
@@ -128,7 +127,8 @@ class DataSource(object):
         except:
             pass
 
-    def __get_tmp_file(self):
+    @staticmethod
+    def get_tmp_file():
         import tempfile
         _, file_path = tempfile.mkstemp()
         return file_path
@@ -161,7 +161,7 @@ class DataSource(object):
 
     def to_db(self, df, tb_name: str, fast_load: str = False, how: str = 'append'):
         if fast_load and str(self.db_type).lower() == 'mysql':
-            file = self.__get_tmp_file()
+            file = self.get_tmp_file()
             df.to_csv(file, index=False, quoting=1)
             conn, engine = self.__get_conn(load_file=True)
             sql = '''
@@ -272,15 +272,18 @@ class DataSource(object):
                     df = pl.from_pandas(df)
         return df
 
-    def read_excel(self, path, sheet_name=None):
+    @staticmethod
+    def read_excel(path, sheet_name=None):
         df = pd.read_excel(path, sheet_name=sheet_name)
         return df
 
     @staticmethod
-    def to_excel(file_path, sheet_list, fillna='', fmt=None, font='微软雅黑', font_color='black', font_size=11, column_width=17):
+    def to_excel(file_path, sheet_list, fillna='', fmt=None, font='微软雅黑', font_color='black', font_size=11,
+                 column_width=17):
 
         '''
         **DataFrame对象写入Excel文件**
+        路径不存在时自动创建
         :param file_path: 文件路径 (须以 .xlsx结尾)
         :param sheet_list: list [[dataframe,sheet_name],[dataframe2,sheet_name2]]
 
@@ -295,6 +298,8 @@ class DataSource(object):
         '''
         if str(file_path)[-5:] != '.xlsx':
             raise Exception('文件路径必须 .xlsx 结尾')
+        if os.path.exists(os.path.dirname(file_path)) is False:
+            os.makedirs(os.path.dirname(file_path))
         wb = xlsxwriter.Workbook(file_path)
         fmt_default = wb.add_format()
         fmt_default.set_font_name(font)
@@ -336,3 +341,16 @@ class DataSource(object):
                     value = data[row_index][col_index]
                     ws.write(row_index + 1, col_index, value, col_format)
         wb.close()
+
+    @staticmethod
+    def delete_file(path):
+        try:
+            ls = os.listdir(path)
+            for i in ls:
+                c_path = os.path.join(path, i)
+                try:
+                    os.remove(c_path)
+                except Exception as e:
+                    pass
+        except Exception as e:
+            pass
